@@ -21,14 +21,13 @@ urls=(
 for url in "${urls[@]}"
 do
     SHORT_URL=`curl --disable -s -X POST 'http://localhost:8080/v1/create' -d '{"longUrl":"'$url'"}'`
-    ACTUAL=`curl --disable -s -X GET $SHORT_URL`
+    LONG_URL=`curl --disable -s -w "%{redirect_url}\n" -o /dev/null -X GET $SHORT_URL`
 
-    EXPECTED="<a href=\""$url"\">Temporary Redirect</a>."
-
-    if [ "$ACTUAL" != "$EXPECTED" ]; then
-        echo "Actual  : '$ACTUAL'"
-        echo "Expected: '$EXPECTED'"
+    if [ "$LONG_URL" != "$url" ]; then
+        echo "Actual  : '$LONG_URL'"
+        echo "Expected: '$url'"
         exit 1
     fi
 done
 
+echo "Pass"
