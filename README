@@ -1,2 +1,30 @@
-go get github.com/asaskevich/govalidator
+To build the software, the following dependencies are needed:
+
+```bash
 go get github.com/julienschmidt/httprouter
+go get github.com/mattn/go-sqlite3 && export CGO_ENABLED=1
+```
+
+Once the dependencies have been retrieved:
+```bash
+go build && ./url_shortener &
+```
+
+To run the tests:
+```bash
+testdata/curl_tests.sh
+```
+
+The URL shortener uses 7 bytes for a path (not counting the protocol and domain) and is made up of a combination of upper- and lower-case English letters. This allows for slightly over 3.5 trillion different possible combinations of short url.
+
+One issue in the code that I'd like to have go away was due to a limitation with the http router that I chose.  It allows for wildcards, but there must be some portion of the a url prior to the wildcard that differentiates it from any other explicit route.  Since I had one end point for creation and didn't want to add any unnecessary parts to the path for a short url, I either had to choose another http router, or add every short url as a route as they were created.  In the case where short urls already existed in the database when restarting the service, those existing routes had to be added as well.  If this were to be a real service, it would have been worth taking the time to research other http routers or possibly building my own to overcome that limitation.
+
+I chose to use Sqlite as it:
+* Makes it easier to set up this service rapidly
+* Is fast for small services like this where we're not going to have to worry about massively parralel writes (this isn't Google scale, and I'm not sure that even Google's url shortener had to worry about scaling to hundreds of thousands of writes per second).
+
+There is one error that I do not surface to the user of the service that I want to point out.  When a user expands a url by calling the short url, stats are saved for when that url was expanded.  If the stats fail to save in the database, the url is still expanded and the stat is just silently dropped.  I chose this path due to feeling like most people would rather have the long url than to have all of their stats and because I suppose most urls are shortened to make it easier to share, and those who receive the link are probably not interested in stats at all or even know they are being maintained.
+
+Other ways the code could be improved:
+* Keep the handlers in urlshortener.go, but move all other code out to more logical places, but this is a quick and dirty project.
+* I opted for integration tests here (in curl_tests.sh) but some parts would be better suited for unit tests (e.g., the random character generator to control the seed)
